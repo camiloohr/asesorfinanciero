@@ -11,7 +11,6 @@ import calendar
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Asesor Financiero Inteligente",
-    page_icon="💰",
     layout="wide",
 )
 
@@ -539,3 +538,4 @@ if not st.session_state.logged_in:
     mostrar_login_register()
 else:
     app_principal()
+
