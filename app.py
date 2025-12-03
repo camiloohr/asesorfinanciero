@@ -6,6 +6,7 @@ import hashlib
 from datetime import date, datetime, timedelta
 import calendar
 
+
 # ---------------------------------------------------------
 # Config general
 # ---------------------------------------------------------
@@ -232,8 +233,9 @@ def app_principal():
     st.sidebar.markdown(f"**Usuario:** {username}")
     opcion = st.sidebar.radio(
         "Menú",
-        ["Panel principal", "Registrar movimiento", "Configurar presupuesto fijo"],
+        ["Panel principal", "Registrar movimiento", "Configurar presupuesto fijo", "Historial de gastos", "Generar gráficas"]
     )
+
 
     if st.sidebar.button("Cerrar sesión"):
         st.session_state.logged_in = False
@@ -528,6 +530,68 @@ def app_principal():
             save_users(users)
             st.success("Presupuesto fijo actualizado correctamente.")
 
+    # -------- HISTORIAL DE GASTOS DEL MES --------
+    elif opcion == "Historial de gastos":
+        st.title("Historial de Gastos del Mes")
+
+        # Cargar movimientos
+        df_mov = load_movimientos()
+        df_user = df_mov[df_mov["username"] == username].copy()
+
+        hoy = date.today()
+        mes_actual = hoy.month
+        año_actual = hoy.year
+
+        # Filtrar movimientos del mes actual
+        df_mes = df_user[(df_user["fecha"].dt.month == mes_actual) & (df_user["fecha"].dt.year == año_actual)]
+
+        if df_mes.empty:
+            st.info("No tienes movimientos registrados este mes.")
+        else:
+            df_mes_sorted = df_mes.sort_values("fecha", ascending=False)
+            st.dataframe(df_mes_sorted[["fecha", "tipo", "categoria", "etiqueta", "monto"]])
+
+        # Sumar el total de gastos e ingresos del mes
+        total_gastos = df_mes[df_mes["tipo"] == "Gasto"]["monto"].sum()
+        total_ingresos = df_mes[df_mes["tipo"] == "Ingreso"]["monto"].sum()
+
+        st.markdown("### Resumen del Mes")
+        st.write(f"**Total de Gastos:** ${total_gastos:,.2f}")
+        st.write(f"**Total de Ingresos:** ${total_ingresos:,.2f}")
+        st.write(f"**Balance (Ingresos - Gastos):** ${total_ingresos - total_gastos:,.2f}")
+
+    # -------- GENERAR GRÁFICAS --------
+    elif opcion == "Generar gráficas":
+        st.title("Generar Gráficas de Gastos e Ingresos")
+
+        # Cargar movimientos
+        df_mov = load_movimientos()
+        df_user = df_mov[df_mov["username"] == username].copy()
+
+        hoy = date.today()
+        mes_actual = hoy.month
+        año_actual = hoy.year
+
+        # Filtrar movimientos del mes actual
+        df_mes = df_user[(df_user["fecha"].dt.month == mes_actual) & (df_user["fecha"].dt.year == año_actual)]
+
+        if df_mes.empty:
+            st.info("No tienes movimientos registrados este mes para generar gráficas.")
+        else:
+            # 1. Gráfico de gastos por categoría
+            gastos_categoria = df_mes[df_mes["tipo"] == "Gasto"].groupby("categoria")["monto"].sum().sort_values()
+
+            st.subheader("Gastos por Categoría")
+            st.bar_chart(gastos_categoria)
+
+            # 2. Gráfico de ingresos vs gastos
+            ingresos = df_mes[df_mes["tipo"] == "Ingreso"]["monto"].sum()
+            gastos = df_mes[df_mes["tipo"] == "Gasto"]["monto"].sum()
+
+            st.subheader("Ingresos vs Gastos")
+            st.write(f"**Total Ingresos:** ${ingresos:,.2f}")
+            st.write(f"**Total Gastos:** ${gastos:,.2f}")
+            st.write(f"**Balance:** ${ingresos - gastos:,.2f}")
 
 
 
@@ -538,4 +602,3 @@ if not st.session_state.logged_in:
     mostrar_login_register()
 else:
     app_principal()
-
